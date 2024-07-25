@@ -1,0 +1,48 @@
+trigger:
+     - main
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '14.x'
+      displayName: 'Install Node.js'
+
+    - script: |
+        npm install
+        npm run build
+      displayName: 'npm install and build'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathToPublish: 'build'  # Corrected parameter name
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+- stage: Deploy
+  jobs:
+  - job: Deploy
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'drop'
+        downloadPath: '$(System.ArtifactsDirectory)'
+
+    - task: AzureRmWebAppDeployment@4
+      inputs:
+        ConnectionType: 'AzureRM'
+        azureSubscription: 'Azure subscription 1 (a712c3b7-9421-4c5a-bf70-4b12a9308f4f)'
+        appType: 'webAppLinux'
+        WebAppName: 'TechTutorialWithPiyush'
+        packageForLinux: '$(System.ArtifactsDirectory)/drop'
+        RuntimeStack: 'STATICSITE|1.0'
+
